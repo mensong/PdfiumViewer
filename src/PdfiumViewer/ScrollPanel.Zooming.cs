@@ -25,6 +25,8 @@ namespace PdfiumViewer
         {
             Zoom = Math.Min(Math.Max(zoom, ZoomMin), ZoomMax);
             ZoomMode = PdfViewerZoomMode.None;
+
+            ZoomChanged?.Invoke(this, Zoom);
             OnPagesDisplayModeChanged();
         }
 

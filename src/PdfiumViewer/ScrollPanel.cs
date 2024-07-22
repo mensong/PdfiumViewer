@@ -89,6 +89,8 @@ namespace PdfiumViewer
         }
         public bool IsDocumentLoaded => Document != null && ActualWidth > 0 && ActualHeight > 0;
         public int PageCount => Document?.PageCount ?? 0;
+
+        public event EventHandler<double> ZoomChanged;
         /// <summary>
         /// Gets or sets the current zoom level.
         /// </summary>
