@@ -61,6 +61,7 @@ namespace PdfiumViewer
         {
             base.OnPreviewMouseDown(e);
 
+            //TODO: Mensong - 在滚动条上按下鼠标不应该进入下面条件，否则导致拉滚动条出现错乱的问题
             if (EnableKinetic && IsMouseOver)
             {
                 Cursor = Cursors.ScrollAll;
