@@ -16,16 +16,33 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
         <ToolBar Grid.Row="0" Background="WhiteSmoke">
-            <Button ToolTip="Open Pdf" Click="OpenPdf">
+            <Button ToolTip="Switch to DiffLeftRight" Click="OnDiffLeftRight">
+                <Image Source="Resources/diff_left_right.png" />
+            </Button>
+            <Button ToolTip="Switch to DiffMerge" Click="OnDiffMerge">
+                <Image Source="Resources/diff_merge.png" />
+            </Button>
+
+            <GridSplitter Background="Gray" Width="1" Margin="5,0"/>
+            
+            <Button Name="OpenPDF1" ToolTip="Open Pdf1" Click="OpenPdf">
+                <Image Source="Resources/open_pdf1.png" />
+            </Button>
+            <Button Name="OpenPDF2" ToolTip="Open Pdf2" Click="OpenPdf2">
+                <Image Source="Resources/open_pdf2.png" />
+            </Button>
+            <Button Name="OpenPDFMerge" ToolTip="Open Pdf" Click="OpenPdfMerge" Visibility="Collapsed">
                 <Image Source="Resources/open_pdf.png" />
             </Button>
+
+            <GridSplitter Background="Gray" Width="1" Margin="5,0" />
             <Button ToolTip="Save as Images" Click="SaveAsImages">
                 <Image Source="Resources/save.png" />
             </Button>
-            <Button ToolTip="Render all pages" Click="RenderToMemory">
+            <!--<Button ToolTip="Render all pages" Click="RenderToMemory">
                 <Image Source="Resources/render_all_pages.png" />
-            </Button>
-             <Button Name="BtnShowBookmarks" ToolTip="Show Bookmarks" Click="OnDisplayBookmarks">
+            </Button>-->
+            <!--<Button Name="BtnShowBookmarks" ToolTip="Show Bookmarks" Click="OnDisplayBookmarks">
                 <Image Source="Resources/show_bookmarks.png" />
             </Button>
             <Popup IsOpen="{Binding ShowBookmarks}" 
@@ -46,30 +63,28 @@
                                       ItemsSource="{Binding Bookmarks, Mode=OneWay}"
                                       HorizontalContentAlignment="Stretch"
                                       HorizontalAlignment="Stretch">
-                                <TreeView.ItemTemplate>
-                                    <HierarchicalDataTemplate ItemsSource="{Binding Children, Mode=OneWay}" DataType="{x:Type core:PdfBookmarkCollection}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding PageIndex, Mode=OneWay}" HorizontalAlignment="Right" Margin="10,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                </TreeView.ItemTemplate>
-                                <b:Interaction.Behaviors>
-                                    <converters:BindSelectedItemBehavior SelectedItem="{Binding SelectedBookIndex, Mode=OneWayToSource}" />
-                                </b:Interaction.Behaviors>
-                            </TreeView>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children, Mode=OneWay}" DataType="{x:Type core:PdfBookmarkCollection}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding PageIndex, Mode=OneWay}" HorizontalAlignment="Right" Margin="10,0"/>
+                                </Grid>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <b:Interaction.Behaviors>
+                            <converters:BindSelectedItemBehavior SelectedItem="{Binding SelectedBookIndex, Mode=OneWayToSource}" />
+                        </b:Interaction.Behaviors>
+                    </TreeView>
                 </Border>
-            </Popup>
-            <Button x:Name="BtnSearch" ToolTip="Search term" Click="OpenCloseSearch">
+            </Popup>-->
+            
+            <!--<Button x:Name="BtnSearch" ToolTip="Search term" Click="OpenCloseSearch">
                 <Image Source="Resources/find.png" />
             </Button>
-            <ToggleButton x:Name="BtnHand" ToolTip="Hand Tool" Click="EnableHandTools">
-                <Image Source="Resources/hand_cursor.png" />
-            </ToggleButton>
             <Popup IsOpen="{Binding IsSearchOpen}" 
                    Placement="Bottom"
                    PlacementRectangle="0,20,0,20"
@@ -119,23 +134,26 @@
                         </TextBlock>
                     </StackPanel>
                 </Border>
-            </Popup>
-            <GridSplitter Background="Gray" Width="1" Margin="5,0"/>
+            </Popup>-->
+            <ToggleButton x:Name="BtnHand" ToolTip="Hand Tool" Click="EnableHandTools">
+                <Image Source="Resources/hand_cursor.png" />
+            </ToggleButton>
+            <!--<GridSplitter Background="Gray" Width="1" Margin="5,0"/>
             <Button ToolTip="Is right to left document" Click="ToRtlClick">
                 <Image Source="Resources/rtl.png" />
             </Button>
             <Button ToolTip="Is left to right document" Click="ToLtrClick">
                 <Image Source="Resources/ltr.png" />
-            </Button>
+            </Button>-->
 
-            <GridSplitter Background="Gray" Width="1" Margin="5,0"/>
-
+            <!--<GridSplitter Background="Gray" Width="1" Margin="5,0"/>
             <TextBlock Text="DPI:" VerticalAlignment="Center"/>
             <TextBox x:Name="TxtDpi" Width="50" Text="{Binding ElementName=Renderer, Path=Dpi, UpdateSourceTrigger=PropertyChanged}">
                 <b:Interaction.Behaviors>
                     <converters:AllowableCharactersTextBoxBehavior RegularExpression="^[0-9.\-]+$" MaxLength="6" />
                 </b:Interaction.Behaviors>
-            </TextBox>
+            </TextBox>-->
+
             <GridSplitter Background="Gray" Width="1" Margin="5,0" />
 
             <Button ToolTip="Previous Page" Click="OnPrevPageClick">
@@ -199,9 +217,9 @@
             <Button ToolTip="Transparent Page" Click="OnTransparent">
                 <Image Source="Resources/transparent.png" />
             </Button>
-            <Button ToolTip="Get Page Text" Click="OnGetText">
+            <!--<Button ToolTip="Get Page Text" Click="OnGetText">
                 <Image Source="Resources/show_text.png" />
-            </Button>
+            </Button>-->
             <Button ToolTip="Pdf Information" Click="OnInfo">
                 <Image Source="Resources/info.png" />
             </Button>
@@ -210,7 +228,18 @@
             </Button>
         </ToolBar>
 
-        <pdfiumViewer:PdfRenderer Grid.Row="1" Grid.Column="0" Name="Renderer" Padding="10"/>
+        <Grid Name="gridLeftRight" Grid.Row="1" Grid.Column="0" Visibility="Visible">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50*"/>
+                <ColumnDefinition Width="27*"/>
+                <ColumnDefinition Width="23*"/>
+            </Grid.ColumnDefinitions>
+            <pdfiumViewer:PdfRenderer Grid.Column="0" Name="Renderer1" Padding="10"/>
+            <pdfiumViewer:PdfRenderer Grid.Column="1" Name="Renderer2" Padding="10" Grid.ColumnSpan="2"/>
+        </Grid>
+
+        <pdfiumViewer:PdfRenderer Grid.Row="1" Grid.Column="0" Name="RendererMerge" Padding="10" Visibility="Collapsed"/>
+
 
         <StatusBar Grid.Row="2" Grid.Column="0">
             <StatusBarItem Content="Page:" />

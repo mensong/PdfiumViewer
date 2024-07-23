@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icon.ico</ApplicationIcon>
-    <Version>1.0.5</Version>
+    <Version>0.0.1</Version>
     <PackageReleaseNotes>Added bookmarks list and kinetic scroll on PDF</PackageReleaseNotes>
     <Description>Demo of PDF viewer based on Google's PDFium.</Description>
     <Copyright>Copyright © 2019-2020 Behzad Khosravifar</Copyright>
@@ -19,6 +19,8 @@
   <ItemGroup>
     <None Remove="Resources\close_pdf.png" />
     <None Remove="Resources\continuous_mode.png" />
+    <None Remove="Resources\diff_left_right.png" />
+    <None Remove="Resources\diff_merge.png" />
     <None Remove="Resources\find.png" />
     <None Remove="Resources\fit_height.png" />
     <None Remove="Resources\fit_width.png" />
@@ -28,6 +30,8 @@
     <None Remove="Resources\next.png" />
     <None Remove="Resources\one_page.png" />
     <None Remove="Resources\open_pdf.png" />
+    <None Remove="Resources\open_pdf1.png" />
+    <None Remove="Resources\open_pdf2.png" />
     <None Remove="Resources\prev.png" />
     <None Remove="Resources\render_all_pages.png" />
     <None Remove="Resources\rotate_left.png" />
@@ -57,6 +61,9 @@
 
   <ItemGroup>
     <Resource Include="Resources\close_pdf.png" />
+    <Resource Include="Resources\diff_merge.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Resources\continuous_mode.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
@@ -85,6 +92,12 @@
     <Resource Include="Resources\open_pdf.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Resources\open_pdf2.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Resources\open_pdf1.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Resources\prev.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
@@ -106,6 +119,9 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Resources\transparent.png" />
+    <Resource Include="Resources\diff_left_right.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Resources\two_page.png">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>
@@ -123,6 +139,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -130,6 +151,13 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -12,8 +12,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace PdfiumViewer.Demo
 {
@@ -22,32 +24,298 @@ namespace PdfiumViewer.Demo
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        private string leftPdf;
+        private string rightPdf;
+        private string overridePdf;
+
+        private DispatcherTimer dispatcherTimer = null;
+
+        private bool passivePropertyChanged = false;
         public MainWindow()
         {
             InitializeComponent();
 
+            //MuPDFCore.MuPDFContext ctx = new MuPDFCore.MuPDFContext();
+            //MuPDFCore.MuPDFDocument doc1 = new MuPDFCore.MuPDFDocument(ctx, 
+            //    @"D:\Working\PDFUCK\x64\Debug\a1.pdf");
+            //var textBlocks = doc1.GetStructuredTextPage(0).StructuredTextBlocks;
+            //string text = "";
+            //for (var i = 0; i < textBlocks.Length; ++i)
+            //{
+            //    var block = textBlocks[i];
+
+            //    for (var j = 0; j < block.Count; ++j)
+            //    {
+            //        string s = block[j].Text;
+                    
+            //        text += s;
+            //    }
+            //}
+
             var version = GetType().Assembly.GetName().Version.ToString(3);
-            Title = $"WPF PDFium Viewer Demo v{version}";
+            Title = $"MPLM Tools PDF Viewer v{version}";
             CurrentProcess = Process.GetCurrentProcess();
             Cts = new CancellationTokenSource();
             DataContext = this;
-            Renderer.PropertyChanged += delegate
+            Renderer1.PropertyChanged += delegate
             {
-                OnPropertyChanged(nameof(Page));
-                OnPropertyChanged(nameof(ZoomPercent));
+                if (!passivePropertyChanged)
+                {
+                    passivePropertyChanged = true;
+
+                    OnPropertyChanged(nameof(Page));
+                    OnPropertyChanged(nameof(ZoomPercent));
+
+                    //Renderer2.GotoPage(Renderer1.PageNo);
+                    //Renderer2.SetZoom(Renderer1.Zoom);
+                    //Renderer2.ScrollToHorizontalOffset(Renderer1.HorizontalOffset);
+                    //Renderer2.ScrollToVerticalOffset(Renderer1.VerticalOffset);
+
+                    passivePropertyChanged = false;
+                }
+                
             };
+            Renderer2.PropertyChanged += delegate
+            {
+                if (!passivePropertyChanged)
+                {
+                    passivePropertyChanged = true;
+
+                    OnPropertyChanged(nameof(Page));
+                    OnPropertyChanged(nameof(ZoomPercent));
+
+                    //Renderer1.GotoPage(Renderer2.PageNo);
+                    //Renderer1.SetZoom(Renderer2.Zoom);
+                    //Renderer1.ScrollToHorizontalOffset(Renderer2.HorizontalOffset);
+                    //Renderer1.ScrollToVerticalOffset(Renderer2.VerticalOffset);
+
+                    passivePropertyChanged = false;
+                }
+            };
+
+            Renderer1.PageChanged += Renderer_PageChanged;
+            Renderer2.PageChanged += Renderer_PageChanged;
+            Renderer1.ScrollChanged += Renderer_ScrollChanged;
+            Renderer2.ScrollChanged += Renderer_ScrollChanged;
+            Renderer1.ZoomChanged += Renderer_ZoomChanged;
+            Renderer2.ZoomChanged += Renderer_ZoomChanged;
 
             MemoryChecker = new System.Windows.Threading.DispatcherTimer();
             MemoryChecker.Tick += OnMemoryChecker;
             MemoryChecker.Interval = new TimeSpan(0, 0, 1);
             MemoryChecker.Start();
 
-            SearchManager = new PdfSearchManager(Renderer);
-            MatchCaseCheckBox.IsChecked = SearchManager.MatchCase;
-            WholeWordOnlyCheckBox.IsChecked = SearchManager.MatchWholeWord;
-            HighlightAllMatchesCheckBox.IsChecked = SearchManager.HighlightAllMatches;
+            //SearchManager = new PdfSearchManager(Renderer1);
+            //MatchCaseCheckBox.IsChecked = SearchManager.MatchCase;
+            //WholeWordOnlyCheckBox.IsChecked = SearchManager.MatchWholeWord;
+            //HighlightAllMatchesCheckBox.IsChecked = SearchManager.HighlightAllMatches;
+
+            Renderer1.EnableKinetic = true;
+            Renderer2.EnableKinetic = true;
+            RendererMerge.EnableKinetic = true;
+
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length == 2)
+            {
+                overridePdf = args[1];
+            }
+            else if (args.Length == 3)
+            {
+                leftPdf = args[1];
+                rightPdf = args[2];
+            }
+            else if (args.Length == 4)
+            {
+                overridePdf = args[1];
+                leftPdf = args[2];
+                rightPdf = args[3];
+            }
+
+            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+            dispatcherTimer.Tick += new EventHandler(OnTimedStartUpOpen);
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+            dispatcherTimer.Start();
         }
 
+        private void OnTimedStartUpOpen(object sender, EventArgs e)
+        {
+            dispatcherTimer.Stop();
+
+            Dispatcher.Invoke(() => {
+
+                if (isDiffLeftRight)
+                {
+                    OnDiffLeftRight(null, null);
+
+                    if (dispatcherTimer != null)
+                        dispatcherTimer.Stop();
+                    dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+                    dispatcherTimer.Tick += (object? sender, EventArgs e) =>
+                    {
+                        dispatcherTimer.Stop();
+
+                        if (!string.IsNullOrEmpty(leftPdf))
+                        {
+                            var bytes = File.ReadAllBytes(leftPdf);
+                            var mem = new MemoryStream(bytes);
+                            Renderer1.OpenPdf(mem);
+                            Renderer1.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                        }
+                        if (!string.IsNullOrEmpty(rightPdf))
+                        {
+                            var bytes = File.ReadAllBytes(rightPdf);
+                            var mem = new MemoryStream(bytes);
+                            Renderer2.OpenPdf(mem);
+                            Renderer2.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                        }
+                    };
+                    dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+                    dispatcherTimer.Start();
+                }                
+                else
+                {
+                    if (!string.IsNullOrEmpty(overridePdf))
+                    {
+                        OnDiffMerge(null, null);
+
+                        if (dispatcherTimer != null)
+                            dispatcherTimer.Stop();
+                        dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+                        dispatcherTimer.Tick += (object? sender, EventArgs e) =>
+                        {
+                            dispatcherTimer.Stop();
+
+                            var bytes = File.ReadAllBytes(overridePdf);
+                            var mem = new MemoryStream(bytes);
+                            RendererMerge.OpenPdf(mem);
+                            RendererMerge.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                        };
+                        dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+                        dispatcherTimer.Start();
+                    }
+                }
+                
+            });
+        }
+
+        private bool passiveZoomChanged = false;
+        private void Renderer_ZoomChanged(object sender, double e)
+        {
+            if (sender == Renderer1)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!passiveZoomChanged)
+                    {
+                        passiveZoomChanged = true;
+                        Renderer2.SetZoom(e);
+                        passiveZoomChanged = false;
+                    }
+                });
+            }
+            else
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!passiveZoomChanged)
+                    {
+                        passiveZoomChanged = true;
+                        Renderer1.SetZoom(e);
+                        passiveZoomChanged = false;
+                    }
+                });
+            }
+        }
+
+        //private bool passiveMouseWheel = false;
+        //private void Renderer_MouseWheel(object sender, MouseWheelEventArgs e)
+        //{
+        //    if (sender == Renderer1)
+        //    {
+        //        Dispatcher.Invoke(() =>
+        //        {
+        //            if (!passiveScrollChanged)
+        //            {
+        //                passiveScrollChanged = true;
+        //                Renderer2.RaiseEvent(e);
+        //                passiveScrollChanged = false;
+        //            }
+        //        });
+        //    }
+        //    else
+        //    {
+        //        Dispatcher.Invoke(() =>
+        //        {
+        //            if (!passiveScrollChanged)
+        //            {
+        //                passiveScrollChanged = true;
+        //                Renderer1.RaiseEvent(e);
+        //                passiveScrollChanged = false;
+        //            }
+        //        });
+        //    }
+
+        //}
+
+        private bool passiveScrollChanged = false;
+        private void Renderer_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+        {
+            if (sender == Renderer1)
+            {
+                Dispatcher.Invoke(() => 
+                {
+                    if (!passiveScrollChanged)
+                    {
+                        passiveScrollChanged = true;
+                        Renderer2.ScrollToHorizontalOffset(e.HorizontalOffset);
+                        Renderer2.ScrollToVerticalOffset(e.VerticalOffset);
+                        passiveScrollChanged = false;
+                    }
+                });
+            }
+            else
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!passiveScrollChanged)
+                    {
+                        passiveScrollChanged = true;
+                        Renderer1.ScrollToHorizontalOffset(e.HorizontalOffset);
+                        Renderer1.ScrollToVerticalOffset(e.VerticalOffset);
+                        passiveScrollChanged = false;
+                    }
+                });                
+            }
+        }
+
+        private bool passivePageChanged = false;
+        private void Renderer_PageChanged(object sender, int e)
+        {
+            if (sender == Renderer1)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!passivePageChanged)
+                    {
+                        passivePageChanged = true;
+                        Renderer2.GotoPage(e);
+                        passivePageChanged = false;
+                    }
+                });
+            }
+            else
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (!passivePageChanged)
+                    {
+                        passivePageChanged = true;
+                        Renderer1.GotoPage(e);
+                        passivePageChanged = false;
+                    }
+                });
+            }
+        }
 
         private Process CurrentProcess { get; }
         private CancellationTokenSource Cts { get; }
@@ -60,21 +328,44 @@ namespace PdfiumViewer.Demo
         public PdfBookmark SelectedBookIndex { get; set; }
         public double ZoomPercent
         {
-            get => Renderer.Zoom * 100;
-            set => Renderer.SetZoom(value / 100);
+            get => MainRender.Zoom * 100;
+            set 
+            {
+                if (isDiffLeftRight)
+                {
+                    Renderer1.SetZoom(value / 100);
+                    Renderer2.SetZoom(value / 100);
+                }
+                else
+                    RendererMerge.SetZoom(value / 100);
+            }
         }
         public bool IsSearchOpen { get; set; }
         public int SearchMatchItemNo { get; set; }
         public int SearchMatchesCount { get; set; }
         public int Page
         {
-            get => Renderer.PageNo + 1;
-            set => Renderer.GotoPage(Math.Min(Math.Max(value - 1, 0), Renderer.PageCount - 1));
+            get => MainRender.PageNo + 1;
+            set 
+            {
+                if (isDiffLeftRight)
+                {
+                    Renderer1.GotoPage(Math.Min(Math.Max(value - 1, 0), Renderer1.PageCount - 1));
+                    Renderer2.GotoPage(Math.Min(Math.Max(value - 1, 0), Renderer2.PageCount - 1));
+                }
+                else
+                    MainRender.GotoPage(Math.Min(Math.Max(value - 1, 0), MainRender.PageCount - 1));
+            }
         }
         public FlowDirection IsRtl
         {
-            get => Renderer.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-            set => Renderer.IsRightToLeft = value == FlowDirection.RightToLeft ? true : false;
+            get => MainRender.IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+            set 
+            {
+                Renderer1.IsRightToLeft = value == FlowDirection.RightToLeft ? true : false; 
+                Renderer2.IsRightToLeft = value == FlowDirection.RightToLeft ? true : false;
+                MainRender.IsRightToLeft = value == FlowDirection.RightToLeft ? true : false;
+            }
         }
 
 
@@ -90,12 +381,23 @@ namespace PdfiumViewer.Demo
         {
             try
             {
-                var pageStep = Renderer.PagesDisplayMode == PdfViewerPagesDisplayMode.BookMode ? 2 : 1;
-                Dispatcher.Invoke(() => Renderer.GotoPage(0));
-                while (Renderer.PageNo < Renderer.PageCount - pageStep)
                 {
-                    Dispatcher.Invoke(() => Renderer.NextPage());
-                    await Task.Delay(1);
+                    var pageStep = Renderer1.PagesDisplayMode == PdfViewerPagesDisplayMode.BookMode ? 2 : 1;
+                    Dispatcher.Invoke(() => Renderer1.GotoPage(0));
+                    while (Renderer1.PageNo < Renderer1.PageCount - pageStep)
+                    {
+                        Dispatcher.Invoke(() => Renderer1.NextPage());
+                        await Task.Delay(1);
+                    }
+                }
+                {
+                    var pageStep = Renderer2.PagesDisplayMode == PdfViewerPagesDisplayMode.BookMode ? 2 : 1;
+                    Dispatcher.Invoke(() => Renderer2.GotoPage(0));
+                    while (Renderer2.PageNo < Renderer2.PageCount - pageStep)
+                    {
+                        Dispatcher.Invoke(() => Renderer2.NextPage());
+                        await Task.Delay(1);
+                    }
                 }
             }
             catch (Exception ex)
@@ -118,62 +420,173 @@ namespace PdfiumViewer.Demo
             {
                 var bytes = File.ReadAllBytes(dialog.FileName);
                 var mem = new MemoryStream(bytes);
-                Renderer.OpenPdf(mem);
+                Renderer1.OpenPdf(mem);
             }
         }
+
+        private void OpenPdf2(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*",
+                Title = "Open PDF File"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var bytes = File.ReadAllBytes(dialog.FileName);
+                var mem = new MemoryStream(bytes);
+                Renderer2.OpenPdf(mem);
+            }
+        }
+
+        private void OpenPdfMerge(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*",
+                Title = "Open PDF File"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                var bytes = File.ReadAllBytes(dialog.FileName);
+                var mem = new MemoryStream(bytes);
+                RendererMerge.OpenPdf(mem);
+            }
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
 
             MemoryChecker?.Stop();
-            Renderer?.Dispose();
+            Renderer1?.Dispose();
+            Renderer2?.Dispose();
+            RendererMerge?.Dispose();
         }
         private void OnPrevPageClick(object sender, RoutedEventArgs e)
         {
-            Renderer.PreviousPage();
+            if (isDiffLeftRight)
+            {
+                Renderer1.PreviousPage();
+                Renderer2.PreviousPage();
+            }
+            else
+                RendererMerge.PreviousPage();
         }
         private void OnNextPageClick(object sender, RoutedEventArgs e)
         {
-            Renderer.NextPage();
+            if (isDiffLeftRight)
+            {
+                Renderer1.NextPage();
+                Renderer2.NextPage();
+            }
+            else
+                RendererMerge.NextPage();
         }
         private void OnFitWidth(object sender, RoutedEventArgs e)
         {
-            Renderer.SetZoomMode(PdfViewerZoomMode.FitWidth);
+            if (isDiffLeftRight)
+            {
+                Renderer1.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                Renderer2.SetZoomMode(PdfViewerZoomMode.FitWidth);
+            }
+            else
+                RendererMerge.SetZoomMode(PdfViewerZoomMode.FitWidth);
         }
         private void OnFitHeight(object sender, RoutedEventArgs e)
         {
-            Renderer.SetZoomMode(PdfViewerZoomMode.FitHeight);
+            if (isDiffLeftRight)
+            {
+                Renderer1.SetZoomMode(PdfViewerZoomMode.FitHeight);
+                Renderer2.SetZoomMode(PdfViewerZoomMode.FitHeight);
+            }
+            else
+            {
+                RendererMerge.SetZoomMode(PdfViewerZoomMode.FitHeight);
+            }
         }
         private void OnZoomInClick(object sender, RoutedEventArgs e)
         {
-            Renderer.ZoomIn();
+            if (isDiffLeftRight)
+            {
+                Renderer1.ZoomIn();
+                Renderer2.ZoomIn();
+            }
+            else
+            {
+                RendererMerge.ZoomIn();
+            }
         }
         private void OnZoomOutClick(object sender, RoutedEventArgs e)
         {
-            Renderer.ZoomOut();
+            if (isDiffLeftRight)
+            {
+                Renderer1.ZoomOut();
+                Renderer2.ZoomOut();
+            }
+            else
+            {
+                RendererMerge.ZoomOut();
+            }
         }
         private void OnRotateLeftClick(object sender, RoutedEventArgs e)
         {
-            Renderer.Counterclockwise();
+            if (isDiffLeftRight)
+            {
+                Renderer1.Counterclockwise();
+                Renderer2.Counterclockwise();
+            }
+            else
+            {
+                RendererMerge.Counterclockwise();
+            }
         }
         private void OnRotateRightClick(object sender, RoutedEventArgs e)
         {
-            Renderer.ClockwiseRotate();
+            if (isDiffLeftRight)
+            {
+                Renderer1.ClockwiseRotate();
+                Renderer2.ClockwiseRotate();
+            }
+            else
+            {
+                RendererMerge.ClockwiseRotate();
+            }
         }
         private void OnInfo(object sender, RoutedEventArgs e)
         {
-            var info = Renderer.GetInformation();
-            if (info != null)
+            if (isDiffLeftRight)
             {
+                var info1 = Renderer1.GetInformation();
+                var info2 = Renderer2.GetInformation();
+
                 var sb = new StringBuilder();
-                sb.AppendLine($"Author: {info.Author}");
-                sb.AppendLine($"Creator: {info.Creator}");
-                sb.AppendLine($"Keywords: {info.Keywords}");
-                sb.AppendLine($"Producer: {info.Producer}");
-                sb.AppendLine($"Subject: {info.Subject}");
-                sb.AppendLine($"Title: {info.Title}");
-                sb.AppendLine($"Create Date: {info.CreationDate}");
-                sb.AppendLine($"Modified Date: {info.ModificationDate}");
+                sb.AppendLine($"Author: [{info1?.Author}] VS [{info2?.Author}]");
+                sb.AppendLine($"Creator: [{info1?.Creator}] VS [{info2?.Creator}]");
+                sb.AppendLine($"Keywords: [{info1?.Keywords}] VS [{info2?.Keywords}]");
+                sb.AppendLine($"Producer: [{info1?.Producer}] VS [{info2?.Producer}]");
+                sb.AppendLine($"Subject: [{info1?.Subject}] VS [{info2?.Subject}]");
+                sb.AppendLine($"Title: [{info1?.Title}] VS [{info2?.Title}]");
+                sb.AppendLine($"Create Date: [{info1?.CreationDate}] VS [{info2?.CreationDate}]");
+                sb.AppendLine($"Modified Date: [{info1?.ModificationDate}] VS [{info2?.ModificationDate}]");
+
+                MessageBox.Show(sb.ToString(), "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                var info = RendererMerge.GetInformation();
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"Author: [{info?.Author}] ");
+                sb.AppendLine($"Creator: [{info?.Creator}] ");
+                sb.AppendLine($"Keywords: [{info?.Keywords}] ");
+                sb.AppendLine($"Producer: [{info?.Producer}] ");
+                sb.AppendLine($"Subject: [{info?.Subject}] ");
+                sb.AppendLine($"Title: [{info?.Title}] ");
+                sb.AppendLine($"Create Date: [{info?.CreationDate}] ");
+                sb.AppendLine($"Modified Date: [{info?.ModificationDate}] ");
 
                 MessageBox.Show(sb.ToString(), "Information", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -181,28 +594,43 @@ namespace PdfiumViewer.Demo
         private void OnGetText(object sender, RoutedEventArgs e)
         {
             var txtViewer = new TextViewer();
-            var page = Renderer.PageNo;
-            txtViewer.Body = Renderer.GetPdfText(page);
+            var page = Renderer1.PageNo;
+            txtViewer.Body = Renderer1.GetPdfText(page);
             txtViewer.Caption = $"Page {page + 1} contains {txtViewer.Body?.Length} character(s):";
             txtViewer.ShowDialog();
         }
         private void OnDisplayBookmarks(object sender, RoutedEventArgs e)
         {
-            Bookmarks = Renderer.Bookmarks;
-            if (Bookmarks?.Count > 0)
-                ShowBookmarks = !ShowBookmarks;
+            if (isDiffLeftRight)
+            {
+                Bookmarks = Renderer1.Bookmarks;
+                if (Bookmarks?.Count > 0)
+                    ShowBookmarks = !ShowBookmarks;
+            }
+            else
+            {
+                Bookmarks = RendererMerge.Bookmarks;
+                if (Bookmarks?.Count > 0)
+                    ShowBookmarks = !ShowBookmarks;
+            }
         }
         private void OnContinuousModeClick(object sender, RoutedEventArgs e)
         {
-            Renderer.PagesDisplayMode = PdfViewerPagesDisplayMode.ContinuousMode;
+            Renderer1.PagesDisplayMode = PdfViewerPagesDisplayMode.ContinuousMode;
+            Renderer2.PagesDisplayMode = PdfViewerPagesDisplayMode.ContinuousMode;
+            RendererMerge.PagesDisplayMode = PdfViewerPagesDisplayMode.ContinuousMode;
         }
         private void OnBookModeClick(object sender, RoutedEventArgs e)
         {
-            Renderer.PagesDisplayMode = PdfViewerPagesDisplayMode.BookMode;
+            Renderer1.PagesDisplayMode = PdfViewerPagesDisplayMode.BookMode;
+            Renderer2.PagesDisplayMode = PdfViewerPagesDisplayMode.BookMode;
+            RendererMerge.PagesDisplayMode = PdfViewerPagesDisplayMode.BookMode;
         }
         private void OnSinglePageModeClick(object sender, RoutedEventArgs e)
         {
-            Renderer.PagesDisplayMode = PdfViewerPagesDisplayMode.SinglePageMode;
+            Renderer1.PagesDisplayMode = PdfViewerPagesDisplayMode.SinglePageMode;
+            Renderer2.PagesDisplayMode = PdfViewerPagesDisplayMode.SinglePageMode;
+            RendererMerge.PagesDisplayMode = PdfViewerPagesDisplayMode.SinglePageMode;
         }
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -213,13 +641,35 @@ namespace PdfiumViewer.Demo
         }
         private void OnTransparent(object sender, RoutedEventArgs e)
         {
-            if ((Renderer.Flags & PdfRenderFlags.Transparent) != 0)
             {
-                Renderer.Flags &= ~PdfRenderFlags.Transparent;
+                if ((Renderer1.Flags & PdfRenderFlags.Transparent) != 0)
+                {
+                    Renderer1.Flags &= ~PdfRenderFlags.Transparent;
+                }
+                else
+                {
+                    Renderer1.Flags |= PdfRenderFlags.Transparent;
+                }
             }
-            else
             {
-                Renderer.Flags |= PdfRenderFlags.Transparent;
+                if ((Renderer2.Flags & PdfRenderFlags.Transparent) != 0)
+                {
+                    Renderer2.Flags &= ~PdfRenderFlags.Transparent;
+                }
+                else
+                {
+                    Renderer2.Flags |= PdfRenderFlags.Transparent;
+                }
+            }
+            {
+                if ((RendererMerge.Flags & PdfRenderFlags.Transparent) != 0)
+                {
+                    RendererMerge.Flags &= ~PdfRenderFlags.Transparent;
+                }
+                else
+                {
+                    RendererMerge.Flags |= PdfRenderFlags.Transparent;
+                }
             }
         }
         private void OpenCloseSearch(object sender, RoutedEventArgs e)
@@ -227,13 +677,15 @@ namespace PdfiumViewer.Demo
             IsSearchOpen = !IsSearchOpen;
             OnPropertyChanged(nameof(IsSearchOpen));
         }
-        private void OnSearchTermKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                Search();
-            }
-        }
+
+        //private void OnSearchTermKeyDown(object sender, KeyEventArgs e)
+        //{
+        //    if (e.Key == Key.Enter)
+        //    {
+        //        Search();
+        //    }
+        //}
+
         private void SaveAsImages(object sender, RoutedEventArgs e)
         {
             // Create a "Save As" dialog for selecting a directory (HACK)
@@ -266,10 +718,10 @@ namespace PdfiumViewer.Demo
         {
             try
             {
-                for (var i = 0; i < Renderer.PageCount; i++)
+                for (var i = 0; i < Renderer1.PageCount; i++)
                 {
-                    var size = Renderer.Document.PageSizes[i];
-                    var image = Renderer.Document.Render(i, (int)size.Width * 5, (int)size.Height * 5, 300, 300, false);
+                    var size = Renderer1.Document.PageSizes[i];
+                    var image = Renderer1.Document.Render(i, (int)size.Width * 5, (int)size.Height * 5, 300, 300, false);
                     image.Save(Path.Combine(path, $"img{i}.png"));
                 }
             }
@@ -281,32 +733,33 @@ namespace PdfiumViewer.Demo
             }
         }
 
-        private void Search()
-        {
-            SearchMatchItemNo = 0;
-            SearchManager.MatchCase = MatchCaseCheckBox.IsChecked.GetValueOrDefault();
-            SearchManager.MatchWholeWord = WholeWordOnlyCheckBox.IsChecked.GetValueOrDefault();
-            SearchManager.HighlightAllMatches = HighlightAllMatchesCheckBox.IsChecked.GetValueOrDefault();
-            SearchMatchesTextBlock.Visibility = Visibility.Visible;
+        //private void Search()
+        //{
+        //    SearchMatchItemNo = 0;
+        //    SearchManager.MatchCase = MatchCaseCheckBox.IsChecked.GetValueOrDefault();
+        //    SearchManager.MatchWholeWord = WholeWordOnlyCheckBox.IsChecked.GetValueOrDefault();
+        //    SearchManager.HighlightAllMatches = HighlightAllMatchesCheckBox.IsChecked.GetValueOrDefault();
+        //    SearchMatchesTextBlock.Visibility = Visibility.Visible;
 
-            if (!SearchManager.Search(SearchTerm))
-            {
-                MessageBox.Show(this, "No matches found.");
-            }
-            else
-            {
-                SearchMatchesCount = SearchManager.MatchesCount;
-                // DisplayTextSpan(SearchMatches.Items[SearchMatchItemNo++].TextSpan);
-            }
+        //    if (!SearchManager.Search(SearchTerm))
+        //    {
+        //        MessageBox.Show(this, "No matches found.");
+        //    }
+        //    else
+        //    {
+        //        SearchMatchesCount = SearchManager.MatchesCount;
+        //        // DisplayTextSpan(SearchMatches.Items[SearchMatchItemNo++].TextSpan);
+        //    }
 
-            if (!SearchManager.FindNext(true))
-                MessageBox.Show(this, "Find reached the starting point of the search.");
-        }
+        //    if (!SearchManager.FindNext(true))
+        //        MessageBox.Show(this, "Find reached the starting point of the search.");
+        //}
 
         private void DisplayTextSpan(PdfTextSpan span)
         {
             Page = span.Page + 1;
-            Renderer.ScrollToVerticalOffset(span.Offset);
+            Renderer1.ScrollToVerticalOffset(span.Offset);
+            Renderer2.ScrollToVerticalOffset(span.Offset);
         }
 
         private void OnNextFoundClick(object sender, RoutedEventArgs e)
@@ -331,13 +784,17 @@ namespace PdfiumViewer.Demo
 
         private void ToRtlClick(object sender, RoutedEventArgs e)
         {
-            Renderer.IsRightToLeft = true;
+            Renderer1.IsRightToLeft = true;
+            Renderer2.IsRightToLeft = true;
+            RendererMerge.IsRightToLeft = true;
             OnPropertyChanged(nameof(IsRtl));
         }
 
         private void ToLtrClick(object sender, RoutedEventArgs e)
         {
-            Renderer.IsRightToLeft = false;
+            Renderer1.IsRightToLeft = false;
+            Renderer2.IsRightToLeft = false;
+            RendererMerge.IsRightToLeft = false;
             OnPropertyChanged(nameof(IsRtl));
         }
 
@@ -346,7 +803,9 @@ namespace PdfiumViewer.Demo
             try
             {
                 InfoBar.Foreground = System.Windows.Media.Brushes.Red;
-                Renderer.UnLoad();
+                Renderer1.UnLoad();
+                Renderer2.UnLoad();
+                RendererMerge.UnLoad();
                 await Task.Delay(5000);
                 InfoBar.Foreground = System.Windows.Media.Brushes.Black;
             }
@@ -355,10 +814,88 @@ namespace PdfiumViewer.Demo
                 Console.WriteLine(exception);
             }
         }
+
+        private bool isDiffLeftRight = true;
+        public PdfRenderer MainRender {
+            get
+            {
+                return isDiffLeftRight ? Renderer1 : RendererMerge;
+            }
+
+            private set{}
+        }
+
+        private void OnDiffLeftRight(object sender, RoutedEventArgs e)
+        {
+            OpenPDF1.Visibility = Visibility.Visible;
+            OpenPDF2.Visibility = Visibility.Visible;
+            OpenPDFMerge .Visibility = Visibility.Collapsed;
+            gridLeftRight.Visibility = Visibility.Visible;
+            RendererMerge.Visibility = Visibility.Collapsed;
+
+            if (dispatcherTimer != null)
+                dispatcherTimer.Stop();
+            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+            dispatcherTimer.Tick += (object? sender, EventArgs e) =>
+            {
+                dispatcherTimer.Stop();
+
+                if (!Renderer1.IsDocumentLoaded && !string.IsNullOrEmpty(leftPdf))
+                {
+                    var bytes = File.ReadAllBytes(leftPdf);
+                    var mem = new MemoryStream(bytes);
+                    Renderer1.OpenPdf(mem);
+                    Renderer1.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                }
+                if (!Renderer2.IsDocumentLoaded && !string.IsNullOrEmpty(rightPdf))
+                {
+                    var bytes = File.ReadAllBytes(rightPdf);
+                    var mem = new MemoryStream(bytes);
+                    Renderer2.OpenPdf(mem);
+                    Renderer2.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                }
+            };
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+            dispatcherTimer.Start();
+                        
+            isDiffLeftRight = true;
+        }
+
+        private void OnDiffMerge(object sender, RoutedEventArgs e)
+        {
+            OpenPDF1.Visibility = Visibility.Collapsed;
+            OpenPDF2.Visibility = Visibility.Collapsed;
+            OpenPDFMerge.Visibility = Visibility.Visible;
+            gridLeftRight.Visibility = Visibility.Collapsed;
+            RendererMerge.Visibility = Visibility.Visible;
+
+            if (dispatcherTimer != null)
+                dispatcherTimer.Stop();
+            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+            dispatcherTimer.Tick += (object? sender, EventArgs e) =>
+            {
+                dispatcherTimer.Stop();
+
+                if (!RendererMerge.IsDocumentLoaded && !string.IsNullOrEmpty(overridePdf))
+                {
+                    var bytes = File.ReadAllBytes(overridePdf);
+                    var mem = new MemoryStream(bytes);
+                    RendererMerge.OpenPdf(mem);
+                    RendererMerge.SetZoomMode(PdfViewerZoomMode.FitWidth);
+                }
+            };
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+            dispatcherTimer.Start();
+
+            isDiffLeftRight = false;
+        }
+
         private void EnableHandTools(object sender, RoutedEventArgs e)
         {
             var toggle = (ToggleButton)sender;
-            Renderer.EnableKinetic = toggle.IsChecked == true;
+            Renderer1.EnableKinetic = toggle.IsChecked == true;
+            Renderer2.EnableKinetic = toggle.IsChecked == true;
+            RendererMerge.EnableKinetic = toggle.IsChecked == true;
         }
 
         /// <summary>
@@ -367,7 +904,17 @@ namespace PdfiumViewer.Demo
         private void OnSelectedBookIndexChanged()
         {
             if (SelectedBookIndex != null)
-                Renderer.GotoPage(SelectedBookIndex.PageIndex);
+            {
+                if (isDiffLeftRight)
+                {
+                    Renderer1.GotoPage(SelectedBookIndex.PageIndex);
+                    Renderer2.GotoPage(SelectedBookIndex.PageIndex);
+                }
+                else
+                {
+                    RendererMerge.GotoPage(SelectedBookIndex.PageIndex);
+                }
+            }
         }
     }
 }
