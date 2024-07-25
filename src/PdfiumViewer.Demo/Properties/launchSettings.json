@@ -2,15 +2,7 @@
   "profiles": {
     "PdfiumViewer.Demo": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\Working\\PDFUCK\\x64\\Debug\\a1.pdf D:\\Working\\PDFUCK\\x64\\Debug\\a2.pdf"
-    },
-    "Merge": {
-      "commandName": "Project",
-      "commandLineArgs": "D:\\Working\\PDFUCK\\x64\\Debug\\a1.pdf"
-    },
-    "all": {
-      "commandName": "Project",
-      "commandLineArgs": "D:\\Working\\PDFUCK\\x64\\Debug\\a1.pdf D:\\Working\\PDFUCK\\x64\\Debug\\a1.pdf D:\\Working\\PDFUCK\\x64\\Debug\\a2.pdf"
+      "commandLineArgs": "D:\\Working\\PdfiumViewer\\src\\PdfiumViewer.Demo\\Views.json"
     }
   }
 }

@@ -4,6 +4,7 @@ using PdfiumViewer.Demo.Annotations;
 using PdfiumViewer.Drawing;
 using PdfiumViewer.Enums;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -24,9 +25,7 @@ namespace PdfiumViewer.Demo
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        private string leftPdf;
-        private string rightPdf;
-        private string overridePdf;
+        private List<ViewConfig> viewsConfig = new List<ViewConfig>();
 
         private DispatcherTimer dispatcherTimer = null;
 
@@ -110,42 +109,67 @@ namespace PdfiumViewer.Demo
             //WholeWordOnlyCheckBox.IsChecked = SearchManager.MatchWholeWord;
             //HighlightAllMatchesCheckBox.IsChecked = SearchManager.HighlightAllMatches;
 
-            Renderer1.EnableKinetic = true;
-            Renderer2.EnableKinetic = true;
-            RendererMerge.EnableKinetic = true;
+            //Renderer1.EnableKinetic = true;
+            //Renderer2.EnableKinetic = true;
+            //RendererMerge.EnableKinetic = true;
 
             var args = Environment.GetCommandLineArgs();
-            if (args.Length == 2)
+            if (args != null && args.Length >= 2)
             {
-                overridePdf = args[1];
-            }
-            else if (args.Length == 3)
-            {
-                leftPdf = args[1];
-                rightPdf = args[2];
-            }
-            else if (args.Length == 4)
-            {
-                overridePdf = args[1];
-                leftPdf = args[2];
-                rightPdf = args[3];
-            }
+                try
+                {
+                    //var basePath = Path.GetDirectoryName(
+                    //    System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+                    string viewsConfigStr = File.ReadAllText(args[1]);
+                    viewsConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ViewConfig>>(viewsConfigStr);
+                    foreach (var config in viewsConfig)
+                    {
+                        cmbViewType.Items.Add(config.name);
+                    }
 
-            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-            dispatcherTimer.Tick += new EventHandler(OnTimedStartUpOpen);
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
-            dispatcherTimer.Start();
+                    if (viewsConfig != null && viewsConfig.Count > 0)
+                    {
+                        dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+                        dispatcherTimer.Tick += new EventHandler(OnTimedStartUpOpen);
+                        dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+                        dispatcherTimer.Start();
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+            }
         }
 
-        private void OnTimedStartUpOpen(object sender, EventArgs e)
+        private int GetConfigIndexByName(string name)
         {
-            dispatcherTimer.Stop();
+            for (int i = 0; i < viewsConfig.Count; i++)
+            {
+                if (viewsConfig[i].name == name)
+                    return i;
+            }
+            return -1;
+        }
+
+        private void SwitchToConfig(int configIdx)
+        {
+            if (configIdx < 0 || configIdx >= viewsConfig.Count)
+                return;
+            var config = viewsConfig[configIdx];
+            cmbViewType.SelectedIndex = configIdx;
 
             Dispatcher.Invoke(() => {
 
-                if (isDiffLeftRight)
+                if (config.mode.Equals("leftright", StringComparison.OrdinalIgnoreCase))
                 {
-                    OnDiffLeftRight(null, null);
+                    isDiffLeftRight = true;
+
+                    //OpenPDF1.Visibility = Visibility.Visible;
+                    //OpenPDF2.Visibility = Visibility.Visible;
+                    //OpenPDFMerge.Visibility = Visibility.Collapsed;
+                    gridLeftRight.Visibility = Visibility.Visible;
+                    RendererMerge.Visibility = Visibility.Collapsed;
 
                     if (dispatcherTimer != null)
                         dispatcherTimer.Stop();
@@ -154,48 +178,61 @@ namespace PdfiumViewer.Demo
                     {
                         dispatcherTimer.Stop();
 
-                        if (!string.IsNullOrEmpty(leftPdf))
+                        if (!string.IsNullOrEmpty(config.pdf1))
                         {
-                            var bytes = File.ReadAllBytes(leftPdf);
+                            var bytes = File.ReadAllBytes(config.pdf1);
                             var mem = new MemoryStream(bytes);
                             Renderer1.OpenPdf(mem);
                             Renderer1.SetZoomMode(PdfViewerZoomMode.FitWidth);
                         }
-                        if (!string.IsNullOrEmpty(rightPdf))
+                        if (!string.IsNullOrEmpty(config.pdf2))
                         {
-                            var bytes = File.ReadAllBytes(rightPdf);
+                            var bytes = File.ReadAllBytes(config.pdf2);
                             var mem = new MemoryStream(bytes);
                             Renderer2.OpenPdf(mem);
                             Renderer2.SetZoomMode(PdfViewerZoomMode.FitWidth);
                         }
                     };
-                    dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+                    dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 1);
                     dispatcherTimer.Start();
-                }                
+                }
                 else
                 {
-                    if (!string.IsNullOrEmpty(overridePdf))
+                    isDiffLeftRight = false;
+
+                    //OpenPDF1.Visibility = Visibility.Collapsed;
+                    //OpenPDF2.Visibility = Visibility.Collapsed;
+                    //OpenPDFMerge.Visibility = Visibility.Visible;
+                    gridLeftRight.Visibility = Visibility.Collapsed;
+                    RendererMerge.Visibility = Visibility.Visible;
+
+                    if (dispatcherTimer != null)
+                        dispatcherTimer.Stop();
+                    dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+                    dispatcherTimer.Tick += (object? sender, EventArgs e) =>
                     {
-                        OnDiffMerge(null, null);
+                        dispatcherTimer.Stop();
 
-                        if (dispatcherTimer != null)
-                            dispatcherTimer.Stop();
-                        dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-                        dispatcherTimer.Tick += (object? sender, EventArgs e) =>
+                        if (!string.IsNullOrEmpty(config.pdf1))
                         {
-                            dispatcherTimer.Stop();
-
-                            var bytes = File.ReadAllBytes(overridePdf);
+                            var bytes = File.ReadAllBytes(config.pdf1);
                             var mem = new MemoryStream(bytes);
                             RendererMerge.OpenPdf(mem);
                             RendererMerge.SetZoomMode(PdfViewerZoomMode.FitWidth);
-                        };
-                        dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
-                        dispatcherTimer.Start();
-                    }
+                        }
+                    };
+                    dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 1);
+                    dispatcherTimer.Start();
                 }
-                
+
             });
+        }
+
+        private void OnTimedStartUpOpen(object sender, EventArgs e)
+        {
+            dispatcherTimer.Stop();
+
+            SwitchToConfig(0);
         }
 
         private bool passiveZoomChanged = false;
@@ -827,67 +864,12 @@ namespace PdfiumViewer.Demo
 
         private void OnDiffLeftRight(object sender, RoutedEventArgs e)
         {
-            OpenPDF1.Visibility = Visibility.Visible;
-            OpenPDF2.Visibility = Visibility.Visible;
-            OpenPDFMerge .Visibility = Visibility.Collapsed;
-            gridLeftRight.Visibility = Visibility.Visible;
-            RendererMerge.Visibility = Visibility.Collapsed;
-
-            if (dispatcherTimer != null)
-                dispatcherTimer.Stop();
-            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-            dispatcherTimer.Tick += (object? sender, EventArgs e) =>
-            {
-                dispatcherTimer.Stop();
-
-                if (!Renderer1.IsDocumentLoaded && !string.IsNullOrEmpty(leftPdf))
-                {
-                    var bytes = File.ReadAllBytes(leftPdf);
-                    var mem = new MemoryStream(bytes);
-                    Renderer1.OpenPdf(mem);
-                    Renderer1.SetZoomMode(PdfViewerZoomMode.FitWidth);
-                }
-                if (!Renderer2.IsDocumentLoaded && !string.IsNullOrEmpty(rightPdf))
-                {
-                    var bytes = File.ReadAllBytes(rightPdf);
-                    var mem = new MemoryStream(bytes);
-                    Renderer2.OpenPdf(mem);
-                    Renderer2.SetZoomMode(PdfViewerZoomMode.FitWidth);
-                }
-            };
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
-            dispatcherTimer.Start();
-                        
-            isDiffLeftRight = true;
+            SwitchToConfig(0);
         }
 
         private void OnDiffMerge(object sender, RoutedEventArgs e)
         {
-            OpenPDF1.Visibility = Visibility.Collapsed;
-            OpenPDF2.Visibility = Visibility.Collapsed;
-            OpenPDFMerge.Visibility = Visibility.Visible;
-            gridLeftRight.Visibility = Visibility.Collapsed;
-            RendererMerge.Visibility = Visibility.Visible;
-
-            if (dispatcherTimer != null)
-                dispatcherTimer.Stop();
-            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-            dispatcherTimer.Tick += (object? sender, EventArgs e) =>
-            {
-                dispatcherTimer.Stop();
-
-                if (!RendererMerge.IsDocumentLoaded && !string.IsNullOrEmpty(overridePdf))
-                {
-                    var bytes = File.ReadAllBytes(overridePdf);
-                    var mem = new MemoryStream(bytes);
-                    RendererMerge.OpenPdf(mem);
-                    RendererMerge.SetZoomMode(PdfViewerZoomMode.FitWidth);
-                }
-            };
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
-            dispatcherTimer.Start();
-
-            isDiffLeftRight = false;
+            SwitchToConfig(1);
         }
 
         private void EnableHandTools(object sender, RoutedEventArgs e)
@@ -915,6 +897,11 @@ namespace PdfiumViewer.Demo
                     RendererMerge.GotoPage(SelectedBookIndex.PageIndex);
                 }
             }
+        }
+
+        private void cmbViewType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SwitchToConfig(cmbViewType.SelectedIndex);
         }
     }
 }

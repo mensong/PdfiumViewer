@@ -1,0 +1,25 @@
+[
+	{
+		"name": "双屏对比",
+		"mode": "leftright",
+		"pdf1": "D:\\Working\\PDFUCK\\x64\\Debug\\left.pdf",
+		"pdf2": "D:\\Working\\PDFUCK\\x64\\Debug\\right.pdf"
+	},
+	{
+		"name": "双屏对比-仅文本",
+		"mode": "leftright",
+		"pdf1": "D:\\Working\\PDFUCK\\x64\\Debug\\shape1.pdf",
+		"pdf2": "D:\\Working\\PDFUCK\\x64\\Debug\\shape2.pdf"
+	},
+	{
+		"name": "双屏对比-仅图形",
+		"mode": "leftright",
+		"pdf1": "D:\\Working\\PDFUCK\\x64\\Debug\\b1.pdf",
+		"pdf2": "D:\\Working\\PDFUCK\\x64\\Debug\\b2.pdf"
+	},
+	{
+		"name": "合并对比",
+		"mode": "merge",
+		"pdf1": "D:\\Working\\PDFUCK\\x64\\Debug\\JT-v10-file-format-reference-rev-B_tcm1023-233786.pdf"
+	}
+]

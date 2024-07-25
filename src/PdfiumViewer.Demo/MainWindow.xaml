@@ -16,15 +16,17 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
         <ToolBar Grid.Row="0" Background="WhiteSmoke">
-            <Button ToolTip="Switch to DiffLeftRight" Click="OnDiffLeftRight">
+            <!--<Button ToolTip="Switch to DiffLeftRight" Click="OnDiffLeftRight">
                 <Image Source="Resources/diff_left_right.png" />
             </Button>
             <Button ToolTip="Switch to DiffMerge" Click="OnDiffMerge">
                 <Image Source="Resources/diff_merge.png" />
-            </Button>
+            </Button>-->
+            <Label TextBlock.TextAlignment="Right" Content="视图" VerticalAlignment="Center" />
+            <ComboBox x:Name="cmbViewType" Width="100" Margin="5" Background="Bisque"
+                      SelectionChanged="cmbViewType_SelectionChanged" />
 
-            <GridSplitter Background="Gray" Width="1" Margin="5,0"/>
-            
+            <!--<GridSplitter Background="Gray" Width="1" Margin="5,0"/>            
             <Button Name="OpenPDF1" ToolTip="Open Pdf1" Click="OpenPdf">
                 <Image Source="Resources/open_pdf1.png" />
             </Button>
@@ -33,7 +35,7 @@
             </Button>
             <Button Name="OpenPDFMerge" ToolTip="Open Pdf" Click="OpenPdfMerge" Visibility="Collapsed">
                 <Image Source="Resources/open_pdf.png" />
-            </Button>
+            </Button>-->
 
             <GridSplitter Background="Gray" Width="1" Margin="5,0" />
             <Button ToolTip="Save as Images" Click="SaveAsImages">
@@ -162,7 +164,8 @@
             <Button ToolTip="Next Page" Click="OnNextPageClick">
                 <Image Source="Resources/next.png" />
             </Button>
-            <TextBox x:Name="TxtPageNo" Width="50" Text="{Binding Page, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" Background="Bisque" >
+            <TextBox x:Name="TxtPageNo" Width="50" Text="{Binding Page, UpdateSourceTrigger=PropertyChanged}"
+                     TextAlignment="Center" Background="Bisque" >
                 <b:Interaction.Behaviors>
                     <converters:AllowableCharactersTextBoxBehavior RegularExpression="^[0-9.\-]+$" MaxLength="7" />
                 </b:Interaction.Behaviors>
