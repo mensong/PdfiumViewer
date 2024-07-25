@@ -23,7 +23,7 @@
                 <Image Source="Resources/diff_merge.png" />
             </Button>-->
             <Label TextBlock.TextAlignment="Right" Content="视图" VerticalAlignment="Center" />
-            <ComboBox x:Name="cmbViewType" Width="100" Margin="5" Background="Bisque"
+            <ComboBox x:Name="cmbViewType" Width="150" Margin="5" Background="Bisque"
                       SelectionChanged="cmbViewType_SelectionChanged" />
 
             <!--<GridSplitter Background="Gray" Width="1" Margin="5,0"/>            
